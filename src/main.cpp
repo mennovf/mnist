@@ -3,8 +3,25 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
+#include "data.hpp"
+
+GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int columns) {
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, columns, rows, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
+
+    return textureID;
+}
 
 int main() {
+    auto const DATA = data("./data");
     // Initialize GLFW
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -34,6 +51,11 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
+#define NIMAGES 10
+
+    GLuint textureIds[NIMAGES];
+    for (size_t i = 0; i < NIMAGES; ++i) textureIds[i] = create_texture_from_pixels(&DATA.train.pixels[28*28*i], 28, 28);
+
     // Main loop
     while (!glfwWindowShouldClose(window)) {
         glfwPollEvents();
@@ -45,10 +67,8 @@ int main() {
 
         // Create a simple window
         ImGui::Begin("Hello, ImGui!");
-        ImGui::Text("This is some useful text.");
-        if (ImGui::Button("Click me!")) {
-            std::cout << "Button clicked!" << std::endl;
-        }
+        ImGui::Text("Train image");
+    for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
         ImGui::End();
 
         // Rendering
