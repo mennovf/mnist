@@ -1,1 +1,1 @@
-g++ src/main.cpp -o build/mnist -Wall -std=c++17 -O3 -Iinclude -Isrc
+g++ src/main.cpp imgui/imgui*.cpp imgui/backends/imgui_impl_{glfw,opengl3}.cpp -o build/mnist -Wall -std=c++17 -O3 -Iinclude -Isrc -Iimgui -Iimgui/backends -lglfw -lGL -ldl
