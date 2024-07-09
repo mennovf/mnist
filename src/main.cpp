@@ -4,6 +4,8 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "data.hpp"
+#include "math.hpp"
+#include "layers/fullyconnected.hpp"
 
 GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int columns) {
     GLuint textureID;
