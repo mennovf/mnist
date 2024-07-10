@@ -35,7 +35,6 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
  *  FullyConnected(84),
  *  Sigmoid,
  *  FullyConnected(10),
- *  Softmax
  * };
  *
  * training.randomize();

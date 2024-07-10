@@ -17,22 +17,21 @@ struct NeuralNetwork {
   }
 
   void train(Vec const& x, Vec const& y) {
-    /*
-     * Vec const output = this->forward(x);
-     * Vec const error = y - output;
-     * 
-     * Layer::Gradient grad = this->grad(x);
-     * size_t idx = 0;
-     * for (auto begin = std::rbegin(this->layers); begin != std::rend(this->layers); ++begin) {
-     *     grad = begin->grad(grad.dx, rate);
-     *     if (gradients.size() != layers.size()) {
-     *         gradients.push_back(grad.dw);
-     *     } else {
-     *         gradients[idx] = gradients[idx] + grad.dw;
-     *     }
-     *     ++idx;
-     * }
-     */
+     Vec output = this->forward(x);
+     output.softmax();
+     Vec const error = y - output;
+     
+     Layer::Gradient grad = {.dx = error, .dw = Vec()};
+     size_t idx = 0;
+     for (auto ilayer = std::rbegin(this->layers); ilayer != std::rend(this->layers); ++ilayer) {
+         grad = ilayer->grad(grad.dx);
+         if (gradients.size() != layers.size()) {
+             gradients.push_back(grad.dw);
+         } else {
+             gradients[idx] = gradients[idx] + grad.dw;
+         }
+         ++idx;
+     }
   };
 
   void descent_gradient(double const rate) {

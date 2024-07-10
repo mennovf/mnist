@@ -1,6 +1,7 @@
 #pragma once
 #include <vector>
 #include <iostream>
+#include <cmath>
 
 struct Vec {
   std::vector<double> elements;
@@ -24,6 +25,17 @@ struct Vec {
   void apply(double (*f)(double)) {
     for (auto& val : this->elements) {
       val = f(val);
+    }
+  }
+
+  void softmax() {
+    this->apply(std::exp);
+    double sum = 0;
+    for (size_t i = 0; i < this->elements.size(); ++i) {
+      sum += this->elements[i];
+    }
+    for (size_t i = 0; i < this->elements.size(); ++i) {
+      this->elements[i] /= sum;
     }
   }
 
