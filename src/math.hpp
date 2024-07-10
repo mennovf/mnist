@@ -5,6 +5,7 @@
 struct Vec {
   std::vector<double> elements;
 
+  Vec() = default;
   Vec(size_t s): elements(s) {};
   Vec(std::vector<double> elems): elements{elems} {};
 
@@ -25,6 +26,14 @@ struct Vec {
       val = f(val);
     }
   }
+
+  Vec slice_n(size_t begin, size_t amount) const {
+    Vec result(amount);
+    for (size_t i = 0; i < amount; ++i) {
+      result[i] = this->elements[begin + i];
+    }
+    return result;
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& out, Vec const& v) {
@@ -44,12 +53,30 @@ struct Matrix {
   Matrix(size_t rows, size_t columns, std::vector<double> elements): rows{rows}, columns{columns}, elements{elements} {};
 
   std::vector<double> elements;
+
+  size_t size() const {
+    return this->elements.size();
+  }
+
   double const& at(size_t row, size_t col) const {
     return this->elements[row*columns + col];
   }
 
   double& at(size_t row, size_t col) {
     return const_cast<double &>(static_cast<Matrix const&>(*this).at(row, col));
+  }
+
+  void add_as_vec(Vec const& o) {
+    if (o.size() != this->rows * this->columns) {
+      std::cerr << "Trying to add vector of dimension " << o.size() << " to matrix of dimension " << this->rows << "x" << this->columns << std::endl;
+      std::exit(-1);
+    }
+
+    for (size_t ri = 0; ri < this->rows; ++ri) {
+      for (size_t ci = 0; ci < this->columns; ++ci) {
+        this->at(ri, ci) += o[ri * this->columns + ci];
+      }
+    }
   }
 };
 
@@ -109,4 +136,24 @@ inline Vec operator*(double p, Vec const& v) {
 inline Vec operator*(Vec const& v, double p) {
   return p * v;
 }
+
+inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
+  if (m.rows != v.elements.size()) {
+    std::cerr << "Invalid matrix and vector dimensions. (" << m.rows << "x" << m.columns << ")^T * " << v.elements.size() << std::endl;
+    std::exit(1);
+  }
+
+  Vec result(m.columns);
+
+  for (size_t oi = 0; oi < result.size(); ++oi) {
+    result[oi] = 0;
+    for (size_t ri = 0; ri < m.columns; ++ri) {
+      result[oi] += m.at(ri, oi) * v[ri];
+    }
+  }
+
+  return result;
+}
+
+
 

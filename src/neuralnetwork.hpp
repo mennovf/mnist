@@ -16,17 +16,17 @@ struct NeuralNetwork {
 
   void train(Vec const& x, Vec const& y) {
     /*
-     * Vec const output = this->eval(x);
+     * Vec const output = this->forward(x);
      * Vec const error = y - output;
      * 
-     * Vec grad = this->grad(x);
+     * Layer::Gradient grad = this->grad(x);
      * size_t idx = 0;
      * for (auto begin = std::rbegin(this->layers); begin != std::rend(this->layers); ++begin) {
-     *     grad = begin->grad(grad, rate);
+     *     grad = begin->grad(grad.dx, rate);
      *     if (gradients.size() != layers.size()) {
-     *         gradients.push_back(grad);
+     *         gradients.push_back(grad.dw);
      *     } else {
-     *         gradients[idx] = gradients[idx] + grad;
+     *         gradients[idx] = gradients[idx] + grad.dw;
      *     }
      *     ++idx;
      * }

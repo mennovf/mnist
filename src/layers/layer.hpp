@@ -2,7 +2,25 @@
 #include "math.hpp"
 
 struct Layer {
-  virtual Vec eval(Vec const&) = 0;
-  virtual Vec grad(Vec const&) = 0;
+  struct Gradient {
+    Vec dx;
+    Vec dw;
+  }; 
+
+  Vec const& forward(Vec const& x) {
+    this->x = x;
+    this->fx = this->eval(x);
+    return this->fx;
+  }
+
+  virtual Gradient grad(Vec const&) = 0;
   virtual void adjust_weights(Vec const&) = 0;
+
+  Layer() : x{}, fx{} {};
+
+  protected:
+  Vec x;
+  Vec fx;
+
+  virtual Vec eval(Vec const&) = 0;
 };
