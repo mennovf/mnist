@@ -22,6 +22,45 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
     return textureID;
 }
 
+/*
+ * NeuralNetwork lenet{
+ *  Convolution(5, 5, 2),
+ *  Sigmoid,
+ *  AveragePooling(2, 2, 2),
+ *  Convolution(5, 5, 0),
+ *  Sigmoid,
+ *  AveragePooling(2, 2, 2),
+ *  FullyConnected(120),
+ *  Sigmoid,
+ *  FullyConnected(84),
+ *  Sigmoid,
+ *  FullyConnected(10),
+ *  Softmax
+ * };
+ *
+ * training.randomize();
+ *
+ * size_t const BATCH_SIZE = 32;
+ * size_t const NBATCHES = training.size() / BATCH_SIZE;
+ * size_t epoch = 0;
+ * size_t learning_rate = 0.01;
+ * while (true) {
+ *    std::cout << "Epoch:" << epoch << std::endl;
+ *
+ *    training.shuffle();
+ *    for (size_t batch = 0; batch < NBATCHES; ++batch) {
+ *        for (size_t i = 0; i < BATCH_SIZE; ++i) {
+ *            lenet.train(training[batch * BATCH_SIZE + i]);
+ *        }
+ *
+ *        lenet.descent_gradient(learning_rate / BATCH_SIZE);
+ *    }
+ *
+ *    ++epoch;
+ * }
+ *
+ */
+
 int main() {
     auto const DATA = data("./data");
     // Initialize GLFW
