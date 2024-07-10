@@ -99,3 +99,14 @@ inline Vec operator*(Matrix const& m, Vec const& v) {
   return result;
 }
 
+inline Vec operator*(double p, Vec const& v) {
+  Vec result(v.elements.size());
+  for (size_t i = 0; i < v.elements.size(); ++i) {
+    result[i] = p * v[i];
+  }
+  return result;
+}
+inline Vec operator*(Vec const& v, double p) {
+  return p * v;
+}
+

@@ -31,7 +31,7 @@ struct FullyConnected : public Layer {
     return x;
   }
 
-  virtual void descent_gradient(double rate) override {
+  virtual void adjust_weights(Vec const& a) override {
     return ;
   }
 
