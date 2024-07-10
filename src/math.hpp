@@ -155,5 +155,19 @@ inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
   return result;
 }
 
+inline Vec haddamard_product(Vec const& l, Vec const& r) {
+  if (l.elements.size() != r.elements.size()) {
+    std::cerr << "Invalid vector dimensions." << l.elements.size() << " * " << r.elements.size() << std::endl;
+    std::exit(1);
+  }
+
+  Vec result(l.elements.size());
+
+  for (size_t i = 0; i < l.elements.size(); ++i) {
+    result[i] = l[i] * r[i];
+  }
+  return result;
+}
+
 
 

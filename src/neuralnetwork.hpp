@@ -1,5 +1,7 @@
 #pragma once
 #include "layers/layer.hpp"
+#include "layers/fullyconnected.hpp"
+#include "layers/function.hpp"
 #include <memory>
 #include <vector>
 #include "math.hpp"
