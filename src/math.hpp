@@ -92,6 +92,18 @@ struct Matrix {
   }
 };
 
+inline Vec operator*(double p, Vec const& v) {
+  Vec result(v.elements.size());
+  for (size_t i = 0; i < v.elements.size(); ++i) {
+    result[i] = p * v[i];
+  }
+  return result;
+}
+inline Vec operator*(Vec const& v, double p) {
+  return p * v;
+}
+
+
 inline std::ostream& operator<<(std::ostream& out, Matrix const& m) {
   out << "Matrix[";
   for (size_t ri = 0; ri < m.rows; ++ri) {
@@ -120,6 +132,10 @@ inline Vec operator+(Vec const& l, Vec const& r) {
   return result;
 }
 
+inline Vec operator-(Vec const& l, Vec const& r) {
+  return l + (-1.*r);
+}
+
 inline Vec operator*(Matrix const& m, Vec const& v) {
   if (m.columns != v.elements.size()) {
     std::cerr << "Invalid matrix and vector dimensions." << m.rows << "x" << m.columns << " * " << v.elements.size() << std::endl;
@@ -136,17 +152,6 @@ inline Vec operator*(Matrix const& m, Vec const& v) {
   }
 
   return result;
-}
-
-inline Vec operator*(double p, Vec const& v) {
-  Vec result(v.elements.size());
-  for (size_t i = 0; i < v.elements.size(); ++i) {
-    result[i] = p * v[i];
-  }
-  return result;
-}
-inline Vec operator*(Vec const& v, double p) {
-  return p * v;
 }
 
 inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
@@ -167,7 +172,7 @@ inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
   return result;
 }
 
-inline Vec haddamard_product(Vec const& l, Vec const& r) {
+inline Vec hadamard_product(Vec const& l, Vec const& r) {
   if (l.elements.size() != r.elements.size()) {
     std::cerr << "Invalid vector dimensions." << l.elements.size() << " * " << r.elements.size() << std::endl;
     std::exit(1);

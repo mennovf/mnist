@@ -10,10 +10,17 @@ struct NeuralNetwork {
   std::vector<std::unique_ptr<Layer>> layers;
   std::vector<Vec> gradients; // In reverse order
 
-  NeuralNetwork(std::vector<std::unique_ptr<Layer>> layers): layers{std::move(layers)} {};
+  NeuralNetwork(std::initializer_list<Layer*> init): layers{init.begin(), init.end()} {};
 
   void reset() {
     this->gradients.clear();
+  }
+
+  Vec forward(Vec x) {
+    for (auto& layer : this->layers) {
+      x = layer->forward(x);
+    }
+    return x;
   }
 
   void train(Vec const& x, Vec const& y) {
@@ -24,7 +31,7 @@ struct NeuralNetwork {
      Layer::Gradient grad = {.dx = error, .dw = Vec()};
      size_t idx = 0;
      for (auto ilayer = std::rbegin(this->layers); ilayer != std::rend(this->layers); ++ilayer) {
-         grad = ilayer->grad(grad.dx);
+         grad = (*ilayer)->grad(grad.dx);
          if (gradients.size() != layers.size()) {
              gradients.push_back(grad.dw);
          } else {
@@ -36,7 +43,7 @@ struct NeuralNetwork {
 
   void descent_gradient(double const rate) {
     for (size_t i = 0; i < this->layers.size(); ++i) {
-      layer[i]->adjust_weights(rate * this->gradients[this->gradients.size() - 1 - i]);
+      this->layers[i]->adjust_weights(rate * this->gradients[this->gradients.size() - 1 - i]);
     }
   }
 };
