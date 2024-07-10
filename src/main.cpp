@@ -94,7 +94,13 @@ int main() {
 #define NIMAGES 10
 
     GLuint textureIds[NIMAGES];
-    for (size_t i = 0; i < NIMAGES; ++i) textureIds[i] = create_texture_from_pixels(&DATA.train.pixels[28*28*i], 28, 28);
+    for (size_t i = 0; i < NIMAGES; ++i) {
+        std::vector<uint8_t> pixels(28*28);
+        for (size_t j = 0; j < 28*28; ++j) {
+            pixels[j] = static_cast<uint8_t>(DATA.train.images[i][j] * 255.0);
+        }
+        textureIds[i] = create_texture_from_pixels(pixels.data(), 28, 28);
+    }
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
