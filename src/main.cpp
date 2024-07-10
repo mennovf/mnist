@@ -7,6 +7,7 @@
 #include "math.hpp"
 #include "layers/fullyconnected.hpp"
 #include "layers/function.hpp"
+#include "layers/pool.hpp"
 #include "neuralnetwork.hpp"
 #include <memory>
 #include <random>
@@ -86,14 +87,12 @@ int main() {
 
         /**************************************************************************************************/
         NeuralNetwork lenet{
-            /*
-            Convolution(5, 5, 2),
-                Sigmoid,
-                AveragePooling(2, 2, 2),
-                Convolution(5, 5, 0),
-                Sigmoid,
-                AveragePooling(2, 2, 2),
-                */
+            //Convolution(5, 5, 2),
+                new Sigmoid(),
+                new AveragePooling(28, 28, 2, 2),
+                //Convolution(5, 5, 0),
+                new Sigmoid(),
+                new AveragePooling(10, 10, 2, 2),
                 new FullyConnected(5*5*16, 120),
                 new Sigmoid(),
                 new FullyConnected(120, 84),

@@ -105,13 +105,13 @@ inline Vec operator*(Vec const& v, double p) {
 
 
 inline std::ostream& operator<<(std::ostream& out, Matrix const& m) {
-  out << "Matrix[";
+  out << "[";
   for (size_t ri = 0; ri < m.rows; ++ri) {
     out << "[";
     for (size_t ci = 0; ci < m.columns; ++ci) {
       out << m.at(ri, ci) << ", ";
     }
-    out << "]";
+    out << "],\n";
   }
   out << "]";
   return out;
