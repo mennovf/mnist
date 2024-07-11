@@ -8,7 +8,7 @@
 
 struct Convolution : public Layer {
   struct Channel {
-    Vec weights;
+    Matrix weights;
     std::vector<size_t> input_channels;
   };
 
@@ -23,17 +23,36 @@ struct Convolution : public Layer {
 
   std::vector<Channel> channels;
 
-  Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, size_t p, std::vector<Channel> cs): iheight{ih}, iwidth{iw}, ichannels{ic}, fheight{fh}, fwidth{fw}, padding{p}, channels{cs} {}
+  size_t nweights;
+
+  Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, size_t p, std::vector<Channel> cs): iheight{ih}, iwidth{iw}, ichannels{ic}, fheight{fh}, fwidth{fw}, padding{p}, channels{cs} {
+    this->nweigths = 0;
+    for (Channel const& c : this->channels) {
+      nweights += c.input_channels;
+    }
+    this->nweights *= fheight*fwidth;
+  }
+  
   Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, std::vector<Channel> cs): Convolution(ih, iw, ic, fh, fw, 0, cs) {}
 
   virtual Gradient grad(Vec const& uppergrad) override {
+    size_t oheight = 1 + iheight - fheight + 2*padding;
+    size_t owidth = 1 + iwidth - fwidth + 2*padding;
+    size_t osize = oheight * owidth;
+    size_t isize = iwidth*iheight;
+
+    Vec dx(isize * this->ichannels);
+    Vec dw(this->nweights);
+
+    // TODO
     return {
-      .dx = Vec(),
-      .dw = Vec()
+      .dx = dx,
+      .dw = dw
     };
   };
 
-  virtual void adjust_weights(Vec const& wsandbs) override {
+  virtual void adjust_weights(Vec const& weights) override {
+    //TODO
     (void)wsandbs;
     return;
   }
@@ -71,7 +90,7 @@ struct Convolution : public Layer {
                 // Correct to the non-padding region
                 size_t const irow = iirow - padding;
                 size_t const icol = iicol - padding;
-                acc += x[ichannel*isize + irow*iwidth + icol];
+                acc += channel.weights.at(frow, fcol) * x[ichannel*isize + irow*iwidth + icol];
               }
             }
           }
