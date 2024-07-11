@@ -40,8 +40,8 @@ struct Convolution : public Layer {
 
   private:
   virtual Vec eval(Vec const& x) override {
-    size_t oheight = iheight - fheight + 2*padding;
-    size_t owidth = iwidth - fwidth + 2*padding;
+    size_t oheight = 1 + iheight - fheight + 2*padding;
+    size_t owidth = 1 + iwidth - fwidth + 2*padding;
     size_t osize = oheight * owidth;
     size_t isize = iwidth*iheight;
     Vec y(osize*this->channels.size());
@@ -61,14 +61,14 @@ struct Convolution : public Layer {
             // For each input pixel of the filter
             for (size_t frow = 0; frow < this->fheight; ++frow) {
               for (size_t fcol = 0; fcol < this->fwidth; ++fcol) {
-                // Calculate the indices in the input channel
+                // Calculate the indices in the input channel (with "imaginary" padding)
                 size_t const iirow = orow + frow;
                 size_t const iicol = ocol + fcol;
 
                 // Check whether it is within the padding region
                 if (iirow < padding || iirow >= iheight + padding || iicol < padding || iicol >= iwidth + padding) continue;
 
-                // Correct to the real region
+                // Correct to the non-padding region
                 size_t const irow = iirow - padding;
                 size_t const icol = iicol - padding;
                 acc += x[ichannel*isize + irow*iwidth + icol];
