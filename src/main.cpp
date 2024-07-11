@@ -87,18 +87,30 @@ int main() {
         ImGui::End();
 
         /**************************************************************************************************/
+        auto C1 = Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{});
+        auto S2 = Sigmoid();
+        auto P3 = AveragePooling(28, 28, 2, 2);
+        auto C4 =  Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{});
+        auto S5 = Sigmoid();
+        auto P6 = AveragePooling(10, 10, 2, 2);
+        auto F7 =  FullyConnected(5*5*16, 120);
+        auto S8 = Sigmoid();
+        auto F9 = FullyConnected(120, 84);
+        auto S10 = Sigmoid();
+        auto F11 = FullyConnected(84, 10);
+
         NeuralNetwork lenet{
-                new Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{}),
-                new Sigmoid(),
-                new AveragePooling(28, 28, 2, 2),
-                new Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{}),
-                new Sigmoid(),
-                new AveragePooling(10, 10, 2, 2),
-                new FullyConnected(5*5*16, 120),
-                new Sigmoid(),
-                new FullyConnected(120, 84),
-                new Sigmoid(),
-                new FullyConnected(84, 10),
+            &C1,
+            &S2,
+            &P3,
+            &C4,
+            &S5,
+            &P6,
+            &F7,
+            &S8,
+            &F9,
+            &S10,
+            &F11
         };
 
         size_t const SEED = 0;
