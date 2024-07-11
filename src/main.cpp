@@ -88,10 +88,10 @@ int main() {
 
         /**************************************************************************************************/
         NeuralNetwork lenet{
-                new Convolution(28, 28, 1, 3, 3),
+                new Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{}),
                 new Sigmoid(),
                 new AveragePooling(28, 28, 2, 2),
-                new Convolution(14, 14, 6, 5, 5),
+                new Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{}),
                 new Sigmoid(),
                 new AveragePooling(10, 10, 2, 2),
                 new FullyConnected(5*5*16, 120),
