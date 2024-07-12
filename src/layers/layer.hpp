@@ -15,6 +15,8 @@ struct Layer {
 
   virtual Gradient grad(Vec const&) = 0;
   virtual void adjust_weights(Vec const&) = 0;
+  virtual void dump_weights(std::ostream&) const = 0;
+  virtual void load_weights(std::istream&) = 0;
 
   Layer() : x{}, fx{} {};
 

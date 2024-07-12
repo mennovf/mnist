@@ -36,6 +36,20 @@ struct Convolution : public Layer {
   
   Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, std::vector<Channel> cs): Convolution(ih, iw, ic, fh, fw, 0, cs) {}
 
+  virtual void dump_weights(std::ostream& out) const override {
+    for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
+      Channel const& channel = this->channels[channelidx];
+      out.write((char const *)channel.weights.elements.data(), channel.weights.size()*(sizeof (decltype(channel.weights.elements)::value_type)));
+    }
+  }
+  
+  virtual void load_weights(std::istream& in) override {
+    for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
+      Channel const& channel = this->channels[channelidx];
+      in.read((char *)channel.weights.elements.data(), channel.weights.size()*(sizeof (decltype(channel.weights.elements)::value_type)));
+    }
+  }
+
   virtual Gradient grad(Vec const& uppergrad) override {
     size_t const oheight = 1 + iheight - fheight + 2*padding;
     size_t const owidth = 1 + iwidth - fwidth + 2*padding;

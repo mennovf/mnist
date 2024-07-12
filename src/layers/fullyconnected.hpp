@@ -12,6 +12,15 @@ struct FullyConnected : public Layer {
   FullyConnected(size_t ninputs, size_t nneurons): ninputs{ninputs}, nneurons{nneurons}, weights{nneurons, ninputs}, biases{nneurons} {};
 
 
+  virtual void dump_weights(std::ostream& out) const override {
+      out.write((char const*)this->weights.elements.data(), this->weights.elements.size()*(sizeof (decltype(this->weights.elements)::value_type)));
+      out.write((char const*)this->biases.elements.data(), this->biases.elements.size()*(sizeof (decltype(this->biases.elements)::value_type)));
+  }
+  
+  virtual void load_weights(std::istream& in) override {
+      in.read((char *)this->weights.elements.data(), this->weights.elements.size()*(sizeof (decltype(this->weights.elements)::value_type)));
+      in.read((char *)this->biases.elements.data(), this->biases.elements.size()*(sizeof (decltype(this->biases.elements)::value_type)));
+  }
 
   virtual Gradient grad(Vec const& uppergrad) override {
     Vec dw(this->weights.size() + this->biases.size());

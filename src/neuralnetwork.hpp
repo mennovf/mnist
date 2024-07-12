@@ -46,5 +46,17 @@ struct NeuralNetwork {
       this->layers[i]->adjust_weights(rate * this->gradients[this->gradients.size() - 1 - i]);
     }
   }
+
+  void dump_weights(std::ostream& out) const {
+    for (auto const& layer : this->layers) {
+      layer->dump_weights(out);
+    }
+  }
+
+  void load_weights(std::istream& in) {
+    for (auto const& layer : this->layers) {
+      layer->load_weights(in);
+    }
+  }
 };
 

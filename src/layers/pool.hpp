@@ -43,6 +43,9 @@ struct AveragePooling : public Layer {
     };
   };
 
+  virtual void dump_weights(std::ostream&) const override {}
+  virtual void load_weights(std::istream&) override {}
+
   virtual void adjust_weights(Vec const& wsandbs) override {
     (void)wsandbs;
     return;
