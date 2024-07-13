@@ -140,7 +140,7 @@ int main() {
     std::function<double()> gen = [&](){ return rweights(rng); };
     lenet5.initialize(gen);
 
-    size_t const BATCH_SIZE = 32;
+    size_t const BATCH_SIZE = 50;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
     size_t epoch = 0;
     size_t learning_rate = 0.01;
@@ -149,66 +149,74 @@ int main() {
     std::vector<float> const& loss_eval = loss_train;
 
     // Main loop
-    while (!glfwWindowShouldClose(window)) {
-        glfwPollEvents();
-
-        // Start the ImGui frame
-        ImGui_ImplOpenGL3_NewFrame();
-        ImGui_ImplGlfw_NewFrame();
-        ImGui::NewFrame();
-
-        // Create a simple window
-        ImGui::Begin("Hello, ImGui!");
-
-        if (loss_eval.size() && loss_train.size()) {
-            float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
-                    *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
-            float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
-                    *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
-
-            ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
-            ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
-        }
-
-        /*
-        ImGui::Text("Train image");
-        for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
-        */
-        ImGui::End();
-
+    bool close = false;
+    while (!close) {
         /**************************************************************************************************/
         std::vector<size_t> indices(DATA.train.labels.size());
         std::iota(indices.begin(), indices.end(), 0);
 
-        while (true) {
-            std::cout << "Epoch:" << epoch << std::endl;
-            std::shuffle(std::begin(indices), std::end(indices), rng);
-            
-            double tloss = 0.0;
-            for (size_t batch = 0; batch < NBATCHES; ++batch) {
-                for (size_t i = 0; i < BATCH_SIZE; ++i) {
-                    size_t const idx = indices[batch * BATCH_SIZE + i];
-                    tloss += lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
-                }
+        std::cout << "Epoch:" << epoch << std::endl;
+        std::shuffle(std::begin(indices), std::end(indices), rng);
 
-                lenet5.descent_gradient(learning_rate / BATCH_SIZE);
+        for (size_t batch = 0; batch < NBATCHES && !close; ++batch) {
+            std::cout << "Batch: " << batch << "/" << NBATCHES << std::endl;
+            double tloss = 0.0;
+            for (size_t i = 0; i < BATCH_SIZE; ++i) {
+                size_t const idx = indices[batch * BATCH_SIZE + i];
+                double const loss = lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
+                tloss += loss;
+                std::cout << "Loss: " << loss << std::endl;
             }
+
             loss_train.push_back(tloss / DATA.train.labels.size());
 
-            ++epoch;
+            /************* ImGui stuff *********************/
+            // Start the ImGui frame
+            glfwPollEvents();
+            if (glfwWindowShouldClose(window)) {
+                close = true;
+                break;
+            }
+            ImGui_ImplOpenGL3_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
+            ImGui::NewFrame();
+
+            // Create a simple window
+            ImGui::Begin("Hello, ImGui!");
+
+            if (loss_eval.size() && loss_train.size()) {
+                float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
+                        *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
+                float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
+                        *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
+
+                ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+                ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+            }
+
+            /*
+               ImGui::Text("Train image");
+               for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
+               */
+            ImGui::End();
+            // Rendering
+            ImGui::Render();
+            int display_w, display_h;
+            glfwGetFramebufferSize(window, &display_w, &display_h);
+            glViewport(0, 0, display_w, display_h);
+            glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+            glClear(GL_COLOR_BUFFER_BIT);
+            ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+            glfwSwapBuffers(window);
+            /************* ImGui stuff *********************/
+
+            
+            lenet5.descent_gradient(learning_rate / BATCH_SIZE);
         }
+
+        ++epoch;
         /**************************************************************************************************/
-
-        // Rendering
-        ImGui::Render();
-        int display_w, display_h;
-        glfwGetFramebufferSize(window, &display_w, &display_h);
-        glViewport(0, 0, display_w, display_h);
-        glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-        glfwSwapBuffers(window);
     }
 
     // Cleanup
