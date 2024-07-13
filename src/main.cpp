@@ -73,10 +73,34 @@ int main() {
     }
     */
 
-    auto C1  = Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{});
+    auto C1  = Convolution(28, 28, 1, 5, 5, 2, std::vector<Convolution::Channel>{
+            {{1}},
+            {{1}},
+            {{1}},
+            {{1}},
+            {{1}},
+            {{1}},
+            });
     auto S2  = Sigmoid();
     auto P3  = AveragePooling(28, 28, 2, 2);
-    auto C4  = Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{});
+    auto C4  = Convolution(14, 14, 6, 5, 5, 0, std::vector<Convolution::Channel>{
+            {{0, 1, 2}},
+            {{1, 2, 3}},
+            {{2, 3, 4}},
+            {{3, 4, 5}},
+            {{0, 4, 5}},
+            {{0, 1, 5}},
+            {{0, 1, 2, 3}},
+            {{1, 2, 3, 4}},
+            {{2, 3, 4, 5}},
+            {{0, 3, 4, 5}},
+            {{0, 1, 4, 5}},
+            {{0, 1, 2, 5}},
+            {{0, 1, 3, 4}},
+            {{1, 2, 4, 5}},
+            {{0, 2, 3, 5}},
+            {{0, 1, 2, 3, 4, 5}}
+            });
     auto S5  = Sigmoid();
     auto P6  = AveragePooling(10, 10, 2, 2);
     auto F7  = FullyConnected(5*5*16, 120);
@@ -85,7 +109,7 @@ int main() {
     auto S10 = Sigmoid();
     auto F11 = FullyConnected(84, 10);
 
-    NeuralNetwork lenet{
+    NeuralNetwork lenet5{
         &C1,
         &S2,
         &P3,
@@ -104,14 +128,14 @@ int main() {
 
     std::uniform_real_distribution<double> rweights(-1.0, 1.0);
     std::function<double()> gen = [&](){ return rweights(rng); };
-    lenet.initialize(gen);
+    lenet5.initialize(gen);
 
     size_t const BATCH_SIZE = 32;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
     size_t epoch = 0;
     size_t learning_rate = 0.01;
 
-    std::vector<float> log_loss{1, 10, 100, 2000, 50000};
+    std::vector<float> log_loss;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
