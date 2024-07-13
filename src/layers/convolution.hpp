@@ -58,6 +58,7 @@ struct Convolution : public Layer {
   virtual void initialize(std::function<double(void)>& d) override {
     for (Channel& channel : this->channels) {
       channel.weights.initialize(d);
+      channel.bias = d();
     }
   }
 
