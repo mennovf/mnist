@@ -83,6 +83,7 @@ struct AveragePooling : public Layer {
     return y;
   }
 
+  virtual void initialize(std::function<double(void)>&) override {};
 };
 
 

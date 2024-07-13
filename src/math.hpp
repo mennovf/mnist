@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <cmath>
+#include <random>
 
 struct Vec {
   std::vector<double> elements;
@@ -46,6 +47,13 @@ struct Vec {
     }
     return result;
   }
+
+  template <class Random>
+  void initialize(Random& r) {
+    for (auto& el : this->elements) {
+      el = r();
+    }
+  }
 };
 
 inline std::ostream& operator<<(std::ostream& out, Vec const& v) {
@@ -88,6 +96,13 @@ struct Matrix {
       for (size_t ci = 0; ci < this->columns; ++ci) {
         this->at(ri, ci) += o[ri * this->columns + ci];
       }
+    }
+  }
+
+  template <class Random>
+  void initialize(Random& r) {
+    for (auto& el : this->elements) {
+      el = r();
     }
   }
 };

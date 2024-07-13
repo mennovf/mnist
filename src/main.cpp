@@ -116,6 +116,10 @@ int main() {
         size_t const SEED = 0;
         std::mt19937 rng(SEED);
 
+        std::uniform_real_distribution<double> rweights(-1.0, 1.0);
+        std::function<double()> gen = [&](){ return rweights(rng); };
+        lenet.initialize(gen);
+
         size_t const BATCH_SIZE = 32;
         size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
         size_t epoch = 0;

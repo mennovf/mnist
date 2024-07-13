@@ -58,5 +58,12 @@ struct NeuralNetwork {
       layer->load_weights(in);
     }
   }
+
+  template <class Random>
+  void initialize(Random& r) {
+    for (auto const& layer : this->layers) {
+      layer->initialize(r);
+    }
+  }
 };
 

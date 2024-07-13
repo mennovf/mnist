@@ -1,5 +1,6 @@
 #pragma once
 #include "math.hpp"
+#include <functional>
 
 struct Layer {
   struct Gradient {
@@ -17,6 +18,7 @@ struct Layer {
   virtual void adjust_weights(Vec const&) = 0;
   virtual void dump_weights(std::ostream&) const = 0;
   virtual void load_weights(std::istream&) = 0;
+  virtual void initialize(std::function<double(void)>&) = 0;
 
   Layer() : x{}, fx{} {};
 

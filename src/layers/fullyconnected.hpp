@@ -22,6 +22,11 @@ struct FullyConnected : public Layer {
       in.read((char *)this->biases.elements.data(), this->biases.elements.size()*(sizeof (decltype(this->biases.elements)::value_type)));
   }
 
+  virtual void initialize(std::function<double(void)>& d) override {
+    this->weights.initialize(d);
+    this->biases.initialize(d);
+  }
+
   virtual Gradient grad(Vec const& uppergrad) override {
     Vec dw(this->weights.size() + this->biases.size());
     size_t dwidx = 0;

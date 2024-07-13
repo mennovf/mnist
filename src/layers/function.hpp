@@ -29,6 +29,7 @@ struct Sigmoid : public Layer {
 
   virtual void dump_weights(std::ostream&) const override {}
   virtual void load_weights(std::istream&) override {}
+  virtual void initialize(std::function<double(void)>&) override {};
 
   private:
   virtual Vec eval(Vec const& x) override {

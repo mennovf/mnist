@@ -50,6 +50,12 @@ struct Convolution : public Layer {
     }
   }
 
+  virtual void initialize(std::function<double(void)>& d) override {
+    for (Channel& channel : this->channels) {
+      channel.weights.initialize(d);
+    }
+  }
+
   virtual Gradient grad(Vec const& uppergrad) override {
     size_t const oheight = 1 + iheight - fheight + 2*padding;
     size_t const owidth = 1 + iwidth - fwidth + 2*padding;
