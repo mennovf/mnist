@@ -143,10 +143,13 @@ int main() {
     size_t const BATCH_SIZE = 50;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
     size_t epoch = 0;
-    size_t learning_rate = 0.01;
+    size_t LEARNING_RATE = 0.1;
 
     std::vector<float> loss_train;
     std::vector<float> const& loss_eval = loss_train;
+
+    std::ofstream before("before", std::fstream::binary);
+    lenet5.dump_weights(before);
 
     // Main loop
     bool close = false;
@@ -167,7 +170,11 @@ int main() {
                 tloss += loss;
                 std::cout << "Loss: " << loss << std::endl;
             }
-
+            lenet5.descend_gradient(LEARNING_RATE / BATCH_SIZE);
+            std::ofstream after("after", std::fstream::binary);
+            lenet5.dump_weights(after);
+            std::exit(0);
+            
             loss_train.push_back(tloss / DATA.train.labels.size());
 
             /************* ImGui stuff *********************/
@@ -210,9 +217,6 @@ int main() {
 
             glfwSwapBuffers(window);
             /************* ImGui stuff *********************/
-
-            
-            lenet5.descent_gradient(learning_rate / BATCH_SIZE);
         }
 
         ++epoch;

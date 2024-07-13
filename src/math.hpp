@@ -3,6 +3,7 @@
 #include <iostream>
 #include <cmath>
 #include <random>
+#include <algorithm>
 
 struct Vec {
   std::vector<double> elements;
@@ -55,6 +56,10 @@ struct Vec {
       result[i] = this->elements[begin + i];
     }
     return result;
+  }
+
+  void zero() {
+    std::fill(this->elements.begin(), this->elements.end(), 0.0);
   }
 
   template <class Random>
