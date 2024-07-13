@@ -31,6 +31,7 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
 
 int main() {
     auto const DATA = data("./data");
+
     // Initialize GLFW
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -60,8 +61,8 @@ int main() {
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
 
+    /*
 #define NIMAGES 10
-
     GLuint textureIds[NIMAGES];
     for (size_t i = 0; i < NIMAGES; ++i) {
         std::vector<uint8_t> pixels(28*28);
@@ -70,6 +71,47 @@ int main() {
         }
         textureIds[i] = create_texture_from_pixels(pixels.data(), 28, 28);
     }
+    */
+
+    auto C1  = Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{});
+    auto S2  = Sigmoid();
+    auto P3  = AveragePooling(28, 28, 2, 2);
+    auto C4  = Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{});
+    auto S5  = Sigmoid();
+    auto P6  = AveragePooling(10, 10, 2, 2);
+    auto F7  = FullyConnected(5*5*16, 120);
+    auto S8  = Sigmoid();
+    auto F9  = FullyConnected(120, 84);
+    auto S10 = Sigmoid();
+    auto F11 = FullyConnected(84, 10);
+
+    NeuralNetwork lenet{
+        &C1,
+        &S2,
+        &P3,
+        &C4,
+        &S5,
+        &P6,
+        &F7,
+        &S8,
+        &F9,
+        &S10,
+        &F11
+    };
+
+    size_t const SEED = 0;
+    std::mt19937 rng(SEED);
+
+    std::uniform_real_distribution<double> rweights(-1.0, 1.0);
+    std::function<double()> gen = [&](){ return rweights(rng); };
+    lenet.initialize(gen);
+
+    size_t const BATCH_SIZE = 32;
+    size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
+    size_t epoch = 0;
+    size_t learning_rate = 0.01;
+
+    std::vector<float> log_loss{1, 10, 100, 2000, 50000};
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -80,51 +122,20 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
+        float const ymin = *std::min_element(std::begin(log_loss), std::end(log_loss));
+        float const ymax = *std::max_element(std::begin(log_loss), std::end(log_loss));
+
         // Create a simple window
         ImGui::Begin("Hello, ImGui!");
+        ImGui::PlotLines("Loss", log_loss.data(), log_loss.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+
+        /*
         ImGui::Text("Train image");
         for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
+        */
         ImGui::End();
 
-        /**************************************************************************************************/
-        auto C1 = Convolution(28, 28, 1, 3, 3, std::vector<Convolution::Channel>{});
-        auto S2 = Sigmoid();
-        auto P3 = AveragePooling(28, 28, 2, 2);
-        auto C4 =  Convolution(14, 14, 6, 5, 5, std::vector<Convolution::Channel>{});
-        auto S5 = Sigmoid();
-        auto P6 = AveragePooling(10, 10, 2, 2);
-        auto F7 =  FullyConnected(5*5*16, 120);
-        auto S8 = Sigmoid();
-        auto F9 = FullyConnected(120, 84);
-        auto S10 = Sigmoid();
-        auto F11 = FullyConnected(84, 10);
-
-        NeuralNetwork lenet{
-            &C1,
-            &S2,
-            &P3,
-            &C4,
-            &S5,
-            &P6,
-            &F7,
-            &S8,
-            &F9,
-            &S10,
-            &F11
-        };
-
-        size_t const SEED = 0;
-        std::mt19937 rng(SEED);
-
-        std::uniform_real_distribution<double> rweights(-1.0, 1.0);
-        std::function<double()> gen = [&](){ return rweights(rng); };
-        lenet.initialize(gen);
-
-        size_t const BATCH_SIZE = 32;
-        size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
-        size_t epoch = 0;
-        size_t learning_rate = 0.01;
-
+        /**************************************************************************************************
         std::vector<size_t> indices(DATA.train.labels.size());
         std::iota(indices.begin(), indices.end(), 0);
 
@@ -143,7 +154,7 @@ int main() {
 
             ++epoch;
         }
-        /**************************************************************************************************/
+        **************************************************************************************************/
 
         // Rendering
         ImGui::Render();
