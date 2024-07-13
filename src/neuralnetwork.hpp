@@ -23,7 +23,7 @@ struct NeuralNetwork {
     return x;
   }
 
-  void train(Vec const& x, Vec const& y) {
+  double train(Vec const& x, Vec const& y) {
      Vec output = this->forward(x);
      output.softmax();
      Vec const error = y - output;
@@ -39,6 +39,8 @@ struct NeuralNetwork {
          }
          ++idx;
      }
+
+     return -std::log(Vec::dot(output, y));
   };
 
   void descent_gradient(double const rate) {

@@ -13,6 +13,7 @@
 #include <memory>
 #include <random>
 #include <algorithm>
+#include <fstream>
 
 GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int columns) {
     GLuint textureID;
@@ -130,12 +131,17 @@ int main() {
     std::function<double()> gen = [&](){ return rweights(rng); };
     lenet5.initialize(gen);
 
+    std::ofstream weightfile("weights", std::fstream::binary);
+    lenet5.dump_weights(weightfile);
+    std::exit(1);
+
     size_t const BATCH_SIZE = 32;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
     size_t epoch = 0;
     size_t learning_rate = 0.01;
 
-    std::vector<float> log_loss;
+    std::vector<float> loss_eval;
+    std::vector<float> loss_train;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -146,12 +152,15 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        float const ymin = *std::min_element(std::begin(log_loss), std::end(log_loss));
-        float const ymax = *std::max_element(std::begin(log_loss), std::end(log_loss));
+        float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
+                                    *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
+        float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
+                                    *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
 
         // Create a simple window
         ImGui::Begin("Hello, ImGui!");
-        ImGui::PlotLines("Loss", log_loss.data(), log_loss.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+        ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+        ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
 
         /*
         ImGui::Text("Train image");
@@ -159,7 +168,7 @@ int main() {
         */
         ImGui::End();
 
-        /**************************************************************************************************
+        /**************************************************************************************************/
         std::vector<size_t> indices(DATA.train.labels.size());
         std::iota(indices.begin(), indices.end(), 0);
 
@@ -167,18 +176,20 @@ int main() {
             std::cout << "Epoch:" << epoch << std::endl;
             std::shuffle(std::begin(indices), std::end(indices), rng);
             
+            double tloss = 0.0;
             for (size_t batch = 0; batch < NBATCHES; ++batch) {
                 for (size_t i = 0; i < BATCH_SIZE; ++i) {
                     size_t const idx = indices[batch * BATCH_SIZE + i];
-                    lenet.train(DATA.train.images[idx], DATA.train.labels[idx]);
+                    tloss += lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
                 }
 
-                lenet.descent_gradient(learning_rate / BATCH_SIZE);
+                lenet5.descent_gradient(learning_rate / BATCH_SIZE);
             }
+            loss_train.push_back(tloss / DATA.train.labels.size());
 
             ++epoch;
         }
-        **************************************************************************************************/
+        /**************************************************************************************************/
 
         // Rendering
         ImGui::Render();

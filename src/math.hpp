@@ -29,6 +29,15 @@ struct Vec {
     }
   }
 
+  static double dot(Vec const& l, Vec const& r) {
+    if (l.size() != r.size()) {
+      std::cerr << "Invalid vector dimensions: " << l.size() << " . " << r.size() << std::endl;
+      std::exit(-1);
+    }
+
+    return std::inner_product(l.elements.begin(), l.elements.end(), r.elements.begin(), 0.0);
+  }
+
   void softmax() {
     this->apply(std::exp);
     double sum = 0;
