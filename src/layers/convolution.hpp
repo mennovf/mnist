@@ -30,9 +30,10 @@ struct Convolution : public Layer {
 
   Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, size_t p, std::vector<Channel> cs): iheight{ih}, iwidth{iw}, ichannels{ic}, fheight{fh}, fwidth{fw}, padding{p}, channels{cs} {
     this->nweights = 0;
-    for (Channel const& c : this->channels) {
+    for (Channel& c : this->channels) {
+      c.weights.elements.resize(c.input_channels.size()*this->fheight*this->fwidth);
       this->weights_start.push_back(this->nweights);
-      this->nweights += c.input_channels.size()*fheight*fwidth + 1;
+      this->nweights += c.weights.size() + 1;
     }
     this->weights_start.push_back(this->nweights);
   }
@@ -143,6 +144,7 @@ struct Convolution : public Layer {
       for (size_t orow = 0; orow < oheight; ++orow) {
         for (size_t ocol = 0; ocol < owidth; ++ocol) {
 
+          //std::cout << "y(" << ochannel << "," << orow << "," << ocol << ") <-\n";
           double acc = 0;
           // For each input channel
           for (size_t ichannelidx = 0; ichannelidx < channel.input_channels.size(); ++ichannelidx) {
@@ -161,7 +163,12 @@ struct Convolution : public Layer {
                 // Correct to the non-padding region
                 size_t const irow = iirow - padding;
                 size_t const icol = iicol - padding;
-                acc += channel.weights[ichannelidx * fsize + frow*this->fwidth + fcol] * x[ichannel*isize + irow*iwidth + icol];
+                //std::cout << channel.weights.size() << "Reading weight at: " << ichannelidx * fsize + frow*this->fwidth + fcol << std::endl;;
+                const double weight = channel.weights[ichannelidx * fsize + frow*this->fwidth + fcol];
+                //std::cout << x.size() << "Reading x at: " << ichannel*isize + irow*iwidth + icol << std::endl;;
+                const double xv = x[ichannel*isize + irow*iwidth + icol];
+                acc += weight * xv;
+                //std::cout << "    w(" << ichannelidx << ","<<frow << "," << fcol << ") * x(" <<  ichannel << "," << irow << "," << icol << ")\n";
               }
             }
           }
@@ -170,7 +177,7 @@ struct Convolution : public Layer {
         }
       }
     }
-    return x;
+    return y;
   }
 
 };

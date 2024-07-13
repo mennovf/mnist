@@ -9,7 +9,7 @@ struct FullyConnected : public Layer {
   Matrix weights;
   Vec biases;
 
-  FullyConnected(size_t ninputs, size_t nneurons): ninputs{ninputs}, nneurons{nneurons}, weights{nneurons, ninputs}, biases{nneurons} {};
+  FullyConnected(size_t ninputs, size_t nneurons): ninputs{ninputs}, nneurons{nneurons}, weights{nneurons, ninputs}, biases{nneurons} { };
 
 
   virtual void dump_weights(std::ostream& out) const override {
@@ -33,7 +33,7 @@ struct FullyConnected : public Layer {
     // Weights part
     for (size_t ri = 0; ri < this->weights.rows; ++ri) {
       for (size_t ci = 0; ci < this->weights.columns; ++ci) {
-        dw[dwidx] = this->x[ci] * uppergrad[ci];
+        dw[dwidx] = this->x[ci] * uppergrad[ri];
         ++dwidx;
       }
     }

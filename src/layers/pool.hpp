@@ -53,16 +53,16 @@ struct AveragePooling : public Layer {
 
   private:
   virtual Vec eval(Vec const& x) override {
-    size_t const pchannels = x.size() / (iwidth * iheight);
+    size_t const isize = iwidth * iheight;
+    size_t const pchannels = x.size() / isize;
     size_t const owidth = iwidth / pwidth;
     size_t const oheight = iheight / pheight;
 
     size_t const psize = pwidth * pheight;
-    size_t const isize = iwidth * iheight;
     size_t const osize = owidth*oheight;
     size_t const nout = osize*pchannels;
     double const Ninv = 1. / psize;
-    
+
     Vec y(nout);
     for (size_t ichannel = 0; ichannel < pchannels; ++ichannel) {
       for (size_t orow = 0; orow < oheight; ++orow) {

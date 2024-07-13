@@ -33,6 +33,15 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
 int main() {
     auto const DATA = data("./data");
 
+    /*
+    auto TEST = Convolution(3, 3, 2, 3, 3, 1, std::vector<Convolution::Channel>{
+            {{0, 1}},
+            {{1}},
+            });
+    TEST.forward(Vec());
+    std::exit(0);
+    */
+
     // Initialize GLFW
     if (!glfwInit()) {
         std::cerr << "Failed to initialize GLFW" << std::endl;
@@ -75,12 +84,12 @@ int main() {
     */
 
     auto C1  = Convolution(28, 28, 1, 5, 5, 2, std::vector<Convolution::Channel>{
-            {{1}},
-            {{1}},
-            {{1}},
-            {{1}},
-            {{1}},
-            {{1}},
+            {{0}},
+            {{0}},
+            {{0}},
+            {{0}},
+            {{0}},
+            {{0}},
             });
     auto S2  = Sigmoid();
     auto P3  = AveragePooling(28, 28, 2, 2);
@@ -131,17 +140,13 @@ int main() {
     std::function<double()> gen = [&](){ return rweights(rng); };
     lenet5.initialize(gen);
 
-    std::ofstream weightfile("weights", std::fstream::binary);
-    lenet5.dump_weights(weightfile);
-    std::exit(1);
-
     size_t const BATCH_SIZE = 32;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
     size_t epoch = 0;
     size_t learning_rate = 0.01;
 
-    std::vector<float> loss_eval;
     std::vector<float> loss_train;
+    std::vector<float> const& loss_eval = loss_train;
 
     // Main loop
     while (!glfwWindowShouldClose(window)) {
@@ -152,15 +157,18 @@ int main() {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
-        float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
-                                    *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
-        float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
-                                    *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
-
         // Create a simple window
         ImGui::Begin("Hello, ImGui!");
-        ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
-        ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+
+        if (loss_eval.size() && loss_train.size()) {
+            float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
+                    *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
+            float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
+                    *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
+
+            ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+            ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+        }
 
         /*
         ImGui::Text("Train image");

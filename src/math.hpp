@@ -77,11 +77,10 @@ inline std::ostream& operator<<(std::ostream& out, Vec const& v) {
 struct Matrix {
   size_t rows;
   size_t columns;
-
-  Matrix(size_t rows, size_t columns): elements(rows*columns) {};
-  Matrix(size_t rows, size_t columns, std::vector<double> elements): rows{rows}, columns{columns}, elements{elements} {};
-
   std::vector<double> elements;
+
+  Matrix(size_t rows, size_t columns): rows{rows}, columns{columns}, elements(rows*columns) {};
+  Matrix(size_t rows, size_t columns, std::vector<double> elements): rows{rows}, columns{columns}, elements{elements} {};
 
   size_t size() const {
     return this->elements.size();
@@ -162,7 +161,7 @@ inline Vec operator-(Vec const& l, Vec const& r) {
 
 inline Vec operator*(Matrix const& m, Vec const& v) {
   if (m.columns != v.elements.size()) {
-    std::cerr << "Invalid matrix and vector dimensions." << m.rows << "x" << m.columns << " * " << v.elements.size() << std::endl;
+    std::cerr << "Invalid matrix and vector dimensions: " << m.rows << "x" << m.columns << " * " << v.elements.size() << std::endl;
     std::exit(1);
   }
 
@@ -180,7 +179,7 @@ inline Vec operator*(Matrix const& m, Vec const& v) {
 
 inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
   if (m.rows != v.elements.size()) {
-    std::cerr << "Invalid matrix and vector dimensions. (" << m.rows << "x" << m.columns << ")^T * " << v.elements.size() << std::endl;
+    std::cerr << "Invalid matrix and vector dimensions: (" << m.rows << "x" << m.columns << ")^T * " << v.elements.size() << std::endl;
     std::exit(1);
   }
 
@@ -188,7 +187,7 @@ inline Vec grad_mat_mul(Vec const& v, Matrix const& m) {
 
   for (size_t oi = 0; oi < result.size(); ++oi) {
     result[oi] = 0;
-    for (size_t ri = 0; ri < m.columns; ++ri) {
+    for (size_t ri = 0; ri < m.rows; ++ri) {
       result[oi] += m.at(ri, oi) * v[ri];
     }
   }
