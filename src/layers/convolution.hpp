@@ -9,7 +9,9 @@
 struct Convolution : public Layer {
   struct Channel {
     Vec weights;
+    double bias;
     std::vector<size_t> input_channels;
+    Channel(std::vector<size_t> ics): input_channels{ics} {}
   };
 
   size_t iheight;
@@ -29,9 +31,10 @@ struct Convolution : public Layer {
   Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, size_t p, std::vector<Channel> cs): iheight{ih}, iwidth{iw}, ichannels{ic}, fheight{fh}, fwidth{fw}, padding{p}, channels{cs} {
     this->nweights = 0;
     for (Channel const& c : this->channels) {
-      weights_start.push_back(this->nweights);
-      nweights += c.input_channels.size()*fheight*fwidth;
+      this->weights_start.push_back(this->nweights);
+      this->nweights += c.input_channels.size()*fheight*fwidth + 1;
     }
+    this->weights_start.push_back(this->nweights);
   }
   
   Convolution(size_t ih, size_t iw, size_t ic, size_t fh, size_t fw, std::vector<Channel> cs): Convolution(ih, iw, ic, fh, fw, 0, cs) {}
@@ -40,6 +43,7 @@ struct Convolution : public Layer {
     for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
       Channel const& channel = this->channels[channelidx];
       out.write((char const *)channel.weights.elements.data(), channel.weights.size()*(sizeof (decltype(channel.weights.elements)::value_type)));
+      out.write((char const *)&channel.bias, sizeof(channel.bias));
     }
   }
   
@@ -47,6 +51,7 @@ struct Convolution : public Layer {
     for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
       Channel const& channel = this->channels[channelidx];
       in.read((char *)channel.weights.elements.data(), channel.weights.size()*(sizeof (decltype(channel.weights.elements)::value_type)));
+      in.read((char *)&channel.bias, sizeof(channel.bias));
     }
   }
 
@@ -74,6 +79,7 @@ struct Convolution : public Layer {
       for (size_t orow = 0; orow < oheight; ++orow) {
         for (size_t ocol = 0; ocol < owidth; ++ocol) {
 
+          double const y = uppergrad[ooutstart + orow*owidth + ocol];
           // For each input channel
           for (size_t ichannelidx = 0; ichannelidx < channel.input_channels.size(); ++ichannelidx) {
             size_t const ichannel = channel.input_channels[ichannelidx];
@@ -93,12 +99,14 @@ struct Convolution : public Layer {
                 size_t const icol = iicol - padding;
 
                 // Modify dx and dw
-                double const y = uppergrad[ooutstart + orow*owidth + ocol];
                 dw[this->weights_start[ochannel] + ichannelidx*fsize + frow*this->fwidth + fcol] += y*this->x[ichannel*isize + irow*iwidth + icol];
                 dx[ichannel*isize + irow*iwidth + icol] += y*channel.weights[ichannelidx * fsize + frow*this->fwidth + fcol];
               }
             }
           }
+
+          // Bias
+          dw[this->weights_start[ochannel] + channel.input_channels.size()*fsize] += y;
         }
       }
     }
@@ -113,6 +121,7 @@ struct Convolution : public Layer {
   virtual void adjust_weights(Vec const& weights) override {
     for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
       this->channels[channelidx].weights = weights.slice_n(this->weights_start[channelidx], this->channels[channelidx].weights.size());
+      this->channels[channelidx].bias = weights[this->weights_start[channelidx + 1] - 1];
     }
   }
 
@@ -156,7 +165,7 @@ struct Convolution : public Layer {
             }
           }
           
-          y[ooutstart + orow*owidth + ocol] = acc;
+          y[ooutstart + orow*owidth + ocol] = acc + channel.bias;
         }
       }
     }
