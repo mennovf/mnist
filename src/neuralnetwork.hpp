@@ -45,7 +45,7 @@ struct NeuralNetwork {
 
   void descend_gradient(double const rate) {
     for (size_t i = 0; i < this->layers.size(); ++i) {
-      this->layers[i]->adjust_weights(rate * this->gradients[this->gradients.size() - 1 - i]);
+      this->layers[i]->adjust_weights(-rate * this->gradients[this->gradients.size() - 1 - i]);
       this->gradients[this->gradients.size() - 1 - i].zero();
     }
   }
