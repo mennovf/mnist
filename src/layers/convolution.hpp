@@ -122,8 +122,8 @@ struct Convolution : public Layer {
 
   virtual void adjust_weights(Vec const& weights) override {
     for (size_t channelidx = 0; channelidx < this->channels.size(); ++channelidx) {
-      this->channels[channelidx].weights = weights.slice_n(this->weights_start[channelidx], this->channels[channelidx].weights.size());
-      this->channels[channelidx].bias = weights[this->weights_start[channelidx + 1] - 1];
+      this->channels[channelidx].weights = this->channels[channelidx].weights + weights.slice_n(this->weights_start[channelidx], this->channels[channelidx].weights.size());
+      this->channels[channelidx].bias = this->channels[channelidx].bias + weights[this->weights_start[channelidx + 1] - 1];
     }
   }
 
