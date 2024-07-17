@@ -15,8 +15,9 @@ TARGET = build/mnist
 CPP_SRCS = src/main.cpp $(wildcard imgui/imgui*.cpp) imgui/backends/imgui_impl_glfw.cpp imgui/backends/imgui_impl_opengl3.cpp
 
 # Object files
-CPP_OBJS = $(CPP_SRCS:.cpp=.o)
-OBJS = $(C_OBJS) $(CPP_OBJS)
+OBJS = $(CPP_SRCS:.cpp=.o)
+
+DEPS = $(OBJS:.o=.d)
 
 # Default target
 all: $(TARGET)
@@ -27,15 +28,17 @@ $(TARGET): $(OBJS)
 
 # Rule to compile .c files into .o files
 %.o: %.c
-	$(CC) $(CFLAGS) $(INCLUDES) -c $< -o $@ $(LIBS)
+	$(CC) $(CFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@ $(LIBS)
 
 # Rule to compile .cpp files into .o files
 %.o: %.cpp
-	$(CXX) $(CXXFLAGS) $(INCLUDES) -c $< -o $@ $(LIBS)
+	$(CXX) $(CXXFLAGS) $(INCLUDES) -MMD -MP -c $< -o $@ $(LIBS)
 
 # Clean up
 clean:
 	rm -f $(OBJS) $(TARGET)
+
+-include $(DEPS)
 
 # Phony targets
 .PHONY: all clean
