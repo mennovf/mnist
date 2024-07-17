@@ -12,10 +12,16 @@
 #include "neuralnetwork.hpp"
 #include <memory>
 #include <random>
+#include <charconv>
 #include <algorithm>
 #include <fstream>
 
-GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int columns) {
+GLuint create_texture_from_pixels(double const * const pixels, int rows, int columns) {
+    std::vector<uint8_t> bytes(rows*columns);
+    for (int i = 0; i < rows*columns; ++i) {
+        bytes[i] = 255 * pixels[i];
+    }
+    
     GLuint textureID;
     glGenTextures(1, &textureID);
     glBindTexture(GL_TEXTURE_2D, textureID);
@@ -25,7 +31,7 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, columns, rows, 0, GL_RED, GL_UNSIGNED_BYTE, pixels);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RED, columns, rows, 0, GL_RED, GL_UNSIGNED_BYTE, bytes.data());
 
     return textureID;
 }
@@ -35,12 +41,13 @@ struct CLIOptions {
     char const * weights_out;
     char const * sgd_seed;
     char const * w_seed;
+    size_t eval;
 };
 
 #define PS(p) ((p) ? (p) : "-")
 
 std::ostream& operator<<(std::ostream& os, CLIOptions const& opts) {
-    os << "from_weights: " << PS(opts.from_weights) << ", weights_out: " << PS(opts.weights_out) << ", sgd_seed: " << PS(opts.sgd_seed) << ", w_seed: " << PS(opts.w_seed);
+    os << "from_weights: " << PS(opts.from_weights) << ", weights_out: " << PS(opts.weights_out) << ", sgd_seed: " << PS(opts.sgd_seed) << ", w_seed: " << PS(opts.w_seed) << ", eval: " << opts.eval;
     return os;
 }
 
@@ -68,6 +75,15 @@ int main(int argc, char ** argv) {
             opts.w_seed = next_or_error(arg, "Missing --seed-weights argument");
         } else if (strcmp(*arg, "--seed-sgd") == 0) {
             opts.sgd_seed = next_or_error(arg, "Missing --seed-sgd argument");
+        } else if (strcmp(*arg, "--eval") == 0) {
+            char const * const evals = next_or_error(arg, "Missing --eval argument");
+            size_t v;
+            auto const result = std::from_chars(evals, evals + strlen(evals), v);
+            if (result.ec != std::errc()) {
+                std::cerr << "Invalid --eval argument: " << evals << std::endl;
+                std::exit(1);
+            }
+            opts.eval = v + 1;
         }
     }
 
@@ -110,18 +126,6 @@ int main(int argc, char ** argv) {
     // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init("#version 130");
-
-    /*
-#define NIMAGES 10
-    GLuint textureIds[NIMAGES];
-    for (size_t i = 0; i < NIMAGES; ++i) {
-        std::vector<uint8_t> pixels(28*28);
-        for (size_t j = 0; j < 28*28; ++j) {
-            pixels[j] = static_cast<uint8_t>(DATA.train.images[i][j] * 255.0);
-        }
-        textureIds[i] = create_texture_from_pixels(pixels.data(), 28, 28);
-    }
-    */
 
     auto C1  = Convolution(28, 28, 1, 5, 5, 2, std::vector<Convolution::Channel>{
             {{0}},
@@ -179,7 +183,13 @@ int main(int argc, char ** argv) {
     } else {
         uint32_t seed;
         if (opts.w_seed) {
-            seed = atol(opts.w_seed);
+            uint32_t s;
+            auto cresult = std::from_chars(opts.w_seed, opts.w_seed + strlen(opts.w_seed), s);
+            if (cresult.ec == std::errc()) {
+                std::cerr << "Invalid weights seed: " << opts.w_seed << std::endl;
+                std::exit(-1);
+            }
+            seed = s;
         } else {
             seed = std::random_device{}();
         }
@@ -191,88 +201,152 @@ int main(int argc, char ** argv) {
         std::cout << "Weights seed: " << seed << std::endl;
     }
 
-    uint32_t sgd_seed;
-    if (opts.sgd_seed) {
-        sgd_seed = atol(opts.sgd_seed);
+    if (opts.eval == 0) {
+        // Training
+       
+        uint32_t sgd_seed;
+        if (opts.sgd_seed) {
+            uint32_t s;
+            auto cresult = std::from_chars(opts.sgd_seed, opts.sgd_seed + strlen(opts.sgd_seed), s);
+            if (cresult.ec == std::errc()) {
+                std::cerr << "Invalid SGD seed: " << opts.sgd_seed << std::endl;
+                std::exit(-1);
+            }
+            sgd_seed = s;
+        } else {
+            sgd_seed = std::random_device{}();
+        }
+        std::mt19937 sgd_rng(sgd_seed);
+        std::cout << "SGD Seed: " << sgd_seed << std::endl;
+
+        size_t const BATCH_SIZE = 100;
+        size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
+        size_t const EVAL_SIZE = 100;
+        size_t epoch = 0;
+        double LEARNING_RATE = 0.1;
+
+        std::vector<float> loss_train;
+        std::vector<float> loss_eval;
+
+        // Main loop
+        bool close = false;
+        while (!close) {
+            /**************************************************************************************************/
+            std::vector<size_t> indices(DATA.train.labels.size());
+            std::iota(indices.begin(), indices.end(), 0);
+
+            std::cout << "Epoch:" << epoch << std::endl;
+            std::shuffle(std::begin(indices), std::end(indices), sgd_rng);
+
+            for (size_t batch = 0; batch < NBATCHES && !close; ++batch) {
+                std::cout << "Batch: " << batch << "/" << NBATCHES << std::endl;
+                double tloss = 0.0;
+                for (size_t i = 0; i < BATCH_SIZE; ++i) {
+                    size_t const idx = indices[batch * BATCH_SIZE + i];
+                    double const loss = lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
+                    tloss += loss;
+                }
+                loss_train.push_back(std::log(tloss / BATCH_SIZE));
+                lenet5.descend_gradient(LEARNING_RATE / BATCH_SIZE);
+
+                /*
+                   std::ofstream after("after", std::fstream::binary);
+                   lenet5.dump_weights(after);
+                   std::exit(0);
+                   */
+
+
+                double eloss = 0;
+                for (size_t i = 0; i < EVAL_SIZE; ++i) {
+                    double const loss = lenet5.train(DATA.test.images[i], DATA.test.labels[i]);
+                    eloss += loss;
+                }
+                loss_eval.push_back(std::log(eloss / EVAL_SIZE));
+
+                /************* ImGui stuff *********************/
+                // Start the ImGui frame
+                glfwPollEvents();
+                if (glfwWindowShouldClose(window)) {
+                    close = true;
+                    break;
+                }
+                ImGui_ImplOpenGL3_NewFrame();
+                ImGui_ImplGlfw_NewFrame();
+                ImGui::NewFrame();
+
+                // Create a simple window
+                ImGui::Begin("Hello, ImGui!");
+
+                if (loss_eval.size() && loss_train.size()) {
+                    float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
+                            *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
+                    float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
+                            *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
+
+                    ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+                    ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
+                }
+
+                /*
+                   ImGui::Text("Train image");
+                   for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
+                   */
+                ImGui::End();
+                // Rendering
+                ImGui::Render();
+                int display_w, display_h;
+                glfwGetFramebufferSize(window, &display_w, &display_h);
+                glViewport(0, 0, display_w, display_h);
+                glClearColor(0.45f, 0.55f, 0.60f, 1.00f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+                glfwSwapBuffers(window);
+                /************* ImGui stuff *********************/
+            }
+
+            ++epoch;
+            /**************************************************************************************************/
+        }
+
+        if (opts.weights_out) {
+            std::ofstream weights(opts.weights_out, std::fstream::binary);
+            lenet5.dump_weights(weights);
+        }
+        std::cout << "Last log(training loss) was: " << loss_train.back() << std::endl;
     } else {
-        sgd_seed = std::random_device{}();
-    }
-    std::mt19937 sgd_rng(sgd_seed);
-    std::cout << "SGD Seed: " << sgd_seed << std::endl;
+        // Evaluation
+        size_t const imgindex = opts.eval - 1;
+        auto const img = create_texture_from_pixels(DATA.test.images[imgindex].data(), 28, 28);
 
-    size_t const BATCH_SIZE = 100;
-    size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
-    size_t const EVAL_SIZE = 100;
-    size_t epoch = 0;
-    double LEARNING_RATE = 0.1;
-
-    std::vector<float> loss_train;
-    std::vector<float> loss_eval;
-
-    // Main loop
-    bool close = false;
-    while (!close) {
-        /**************************************************************************************************/
-        std::vector<size_t> indices(DATA.train.labels.size());
-        std::iota(indices.begin(), indices.end(), 0);
-
-        std::cout << "Epoch:" << epoch << std::endl;
-        std::shuffle(std::begin(indices), std::end(indices), sgd_rng);
-
-        for (size_t batch = 0; batch < NBATCHES && !close; ++batch) {
-            std::cout << "Batch: " << batch << "/" << NBATCHES << std::endl;
-            double tloss = 0.0;
-            for (size_t i = 0; i < BATCH_SIZE; ++i) {
-                size_t const idx = indices[batch * BATCH_SIZE + i];
-                double const loss = lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
-                tloss += loss;
+        Vec const x(DATA.test.images[imgindex]);
+        Vec probs = lenet5.forward(x);
+        probs.softmax();
+        size_t guess = 0;
+        double mprob = 0;
+        for (size_t i = 0; i < 10; ++i) {
+            if (probs[i] > mprob) {
+                mprob = probs[i];
+                guess = i;
             }
-            loss_train.push_back(std::log(tloss / BATCH_SIZE));
-            lenet5.descend_gradient(LEARNING_RATE / BATCH_SIZE);
+        }
+        std::cout << "Guess is: " << guess << " with probability: " << mprob << std::endl;
+        std::cout << "All the probabilities are: " << probs << std::endl;
 
-            /*
-            std::ofstream after("after", std::fstream::binary);
-            lenet5.dump_weights(after);
-            std::exit(0);
-            */
-            
-
-            double eloss = 0;
-            for (size_t i = 0; i < EVAL_SIZE; ++i) {
-                double const loss = lenet5.train(DATA.test.images[i], DATA.test.labels[i]);
-                eloss += loss;
-            }
-            loss_eval.push_back(std::log(eloss / EVAL_SIZE));
-
-            /************* ImGui stuff *********************/
+        while (!glfwWindowShouldClose(window)) {
             // Start the ImGui frame
             glfwPollEvents();
-            if (glfwWindowShouldClose(window)) {
-                close = true;
-                break;
-            }
             ImGui_ImplOpenGL3_NewFrame();
             ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
 
             // Create a simple window
-            ImGui::Begin("Hello, ImGui!");
+            ImGui::Begin("Evaluating, ImGui!");
 
-            if (loss_eval.size() && loss_train.size()) {
-                float const ymin = std::min(*std::min_element(std::begin(loss_train), std::end(loss_train)),
-                        *std::min_element(std::begin(loss_eval), std::end(loss_eval)));
-                float const ymax = std::max(*std::max_element(std::begin(loss_train), std::end(loss_train)),
-                        *std::max_element(std::begin(loss_eval), std::end(loss_eval)));
-
-                ImGui::PlotLines("Train", loss_train.data(), loss_train.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
-                ImGui::PlotLines("Eval", loss_eval.data(), loss_eval.size(), 0, nullptr, ymin, ymax, ImVec2(0, 240), sizeof(float));
-            }
-
-            /*
-               ImGui::Text("Train image");
-               for (size_t i = 0; i < NIMAGES; ++i) ImGui::Image((void*)(intptr_t)textureIds[i], ImVec2(28, 28));
-               */
+            ImGui::Text("Input Image");
+            ImGui::Image((void*)(intptr_t)img, ImVec2(28, 28));
             ImGui::End();
+
             // Rendering
             ImGui::Render();
             int display_w, display_h;
@@ -283,18 +357,8 @@ int main(int argc, char ** argv) {
             ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
             glfwSwapBuffers(window);
-            /************* ImGui stuff *********************/
         }
-
-        ++epoch;
-        /**************************************************************************************************/
     }
-
-    if (opts.weights_out) {
-        std::ofstream weights(opts.weights_out, std::fstream::binary);
-        lenet5.dump_weights(weights);
-    }
-    std::cout << "Last log(training loss) was: " << loss_train.back() << std::endl;
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
