@@ -177,16 +177,14 @@ int main(int argc, char ** argv) {
         lenet5.initialize(gen);
     }
 
-    size_t const BATCH_SIZE = 50;
+    size_t const BATCH_SIZE = 100;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
+    size_t const EVAL_SIZE = 100;
     size_t epoch = 0;
-    size_t LEARNING_RATE = 0.1;
+    double LEARNING_RATE = 0.1;
 
     std::vector<float> loss_train;
-    std::vector<float> const& loss_eval = loss_train;
-
-    std::ofstream before("before", std::fstream::binary);
-    lenet5.dump_weights(before);
+    std::vector<float> loss_eval;
 
     // Main loop
     bool close = false;
@@ -205,14 +203,23 @@ int main(int argc, char ** argv) {
                 size_t const idx = indices[batch * BATCH_SIZE + i];
                 double const loss = lenet5.train(DATA.train.images[idx], DATA.train.labels[idx]);
                 tloss += loss;
-                std::cout << "Loss: " << loss << std::endl;
             }
+            loss_train.push_back(std::log(tloss / BATCH_SIZE));
             lenet5.descend_gradient(LEARNING_RATE / BATCH_SIZE);
+
+            /*
             std::ofstream after("after", std::fstream::binary);
             lenet5.dump_weights(after);
             std::exit(0);
+            */
             
-            loss_train.push_back(tloss / DATA.train.labels.size());
+
+            double eloss = 0;
+            for (size_t i = 0; i < EVAL_SIZE; ++i) {
+                double const loss = lenet5.train(DATA.test.images[i], DATA.test.labels[i]);
+                eloss += loss;
+            }
+            loss_eval.push_back(std::log(eloss / EVAL_SIZE));
 
             /************* ImGui stuff *********************/
             // Start the ImGui frame
