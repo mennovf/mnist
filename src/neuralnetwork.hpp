@@ -26,7 +26,7 @@ struct NeuralNetwork {
   double train(Vec const& x, Vec const& y) {
      Vec output = this->forward(x);
      output.softmax();
-     Vec const error = y - output;
+     Vec const error = output - y;
      
      Layer::Gradient grad = {.dx = error, .dw = Vec()};
      size_t idx = 0;
