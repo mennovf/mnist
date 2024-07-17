@@ -30,8 +30,40 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
     return textureID;
 }
 
-int main() {
+struct CLIOptions {
+    char const * from_weights;
+    char const * weights_out;
+};
+
+std::ostream& operator<<(std::ostream& os, CLIOptions const& opts) {
+    os << "from_weights: " << (opts.from_weights ? opts.from_weights : "-") << ", weights_out: " << (opts.weights_out ? opts.weights_out : "-");
+    return os;
+}
+
+char * next_or_error(char ** argv, char const * const emsg) {
+    char ** next = ++argv;
+    if (*next == nullptr) {
+        std::cerr << emsg << std::endl;
+        std::exit(-1);
+    }
+
+    return *next;
+}
+
+int main(int argc, char ** argv) {
     auto const DATA = data("./data");
+
+    CLIOptions opts = {.from_weights = nullptr, .weights_out = nullptr};
+
+    for (char ** arg = &argv[1]; arg != &argv[argc]; ++arg) {
+        if (strcmp(*arg, "--from-weights") == 0) {
+            opts.from_weights = next_or_error(arg, "Missing --from-weights argument"); 
+        } else if (strcmp(*arg, "--weights-out") == 0) {
+            opts.weights_out = next_or_error(arg, "Missing --weights-out argument");
+        }
+    }
+
+    std::cout << "Running with options=" << opts << std::endl;
 
     /*
     auto TEST = Convolution(3, 3, 2, 3, 3, 1, std::vector<Convolution::Channel>{
@@ -136,9 +168,14 @@ int main() {
     size_t const SEED = 0;
     std::mt19937 rng(SEED);
 
-    std::uniform_real_distribution<double> rweights(-1.0, 1.0);
-    std::function<double()> gen = [&](){ return rweights(rng); };
-    lenet5.initialize(gen);
+    if (opts.from_weights) {
+        std::ifstream in(opts.from_weights, std::fstream::binary);
+        lenet5.load_weights(in);
+    } else {
+        std::uniform_real_distribution<double> rweights(-1.0, 1.0);
+        std::function<double()> gen = [&](){ return rweights(rng); };
+        lenet5.initialize(gen);
+    }
 
     size_t const BATCH_SIZE = 50;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
@@ -222,6 +259,12 @@ int main() {
         ++epoch;
         /**************************************************************************************************/
     }
+
+    if (opts.weights_out) {
+        std::ofstream weights(opts.weights_out, std::fstream::binary);
+        lenet5.dump_weights(weights);
+    }
+    std::cout << "Last log(training loss) was: " << loss_train.back() << std::endl;
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();
