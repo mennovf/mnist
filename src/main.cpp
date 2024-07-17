@@ -33,10 +33,14 @@ GLuint create_texture_from_pixels(uint8_t const * const pixels, int rows, int co
 struct CLIOptions {
     char const * from_weights;
     char const * weights_out;
+    char const * sgd_seed;
+    char const * w_seed;
 };
 
+#define PS(p) ((p) ? (p) : "-")
+
 std::ostream& operator<<(std::ostream& os, CLIOptions const& opts) {
-    os << "from_weights: " << (opts.from_weights ? opts.from_weights : "-") << ", weights_out: " << (opts.weights_out ? opts.weights_out : "-");
+    os << "from_weights: " << PS(opts.from_weights) << ", weights_out: " << PS(opts.weights_out) << ", sgd_seed: " << PS(opts.sgd_seed) << ", w_seed: " << PS(opts.w_seed);
     return os;
 }
 
@@ -53,13 +57,17 @@ char * next_or_error(char ** argv, char const * const emsg) {
 int main(int argc, char ** argv) {
     auto const DATA = data("./data");
 
-    CLIOptions opts = {.from_weights = nullptr, .weights_out = nullptr};
+    CLIOptions opts = {};
 
     for (char ** arg = &argv[1]; arg != &argv[argc]; ++arg) {
         if (strcmp(*arg, "--from-weights") == 0) {
             opts.from_weights = next_or_error(arg, "Missing --from-weights argument"); 
         } else if (strcmp(*arg, "--weights-out") == 0) {
             opts.weights_out = next_or_error(arg, "Missing --weights-out argument");
+        } else if (strcmp(*arg, "--seed-weights") == 0) {
+            opts.w_seed = next_or_error(arg, "Missing --seed-weights argument");
+        } else if (strcmp(*arg, "--seed-sgd") == 0) {
+            opts.sgd_seed = next_or_error(arg, "Missing --seed-sgd argument");
         }
     }
 
@@ -165,17 +173,32 @@ int main(int argc, char ** argv) {
         &F11
     };
 
-    size_t const SEED = 0;
-    std::mt19937 rng(SEED);
-
     if (opts.from_weights) {
         std::ifstream in(opts.from_weights, std::fstream::binary);
         lenet5.load_weights(in);
     } else {
+        uint32_t seed;
+        if (opts.w_seed) {
+            seed = atol(opts.w_seed);
+        } else {
+            seed = std::random_device{}();
+        }
+        std::mt19937 w_rng(seed);
         std::uniform_real_distribution<double> rweights(-1.0, 1.0);
-        std::function<double()> gen = [&](){ return rweights(rng); };
+        std::function<double()> gen = [&](){ return rweights(w_rng); };
         lenet5.initialize(gen);
+
+        std::cout << "Weights seed: " << seed << std::endl;
     }
+
+    uint32_t sgd_seed;
+    if (opts.sgd_seed) {
+        sgd_seed = atol(opts.sgd_seed);
+    } else {
+        sgd_seed = std::random_device{}();
+    }
+    std::mt19937 sgd_rng(sgd_seed);
+    std::cout << "SGD Seed: " << sgd_seed << std::endl;
 
     size_t const BATCH_SIZE = 100;
     size_t const NBATCHES = DATA.train.labels.size() / BATCH_SIZE;
@@ -194,7 +217,7 @@ int main(int argc, char ** argv) {
         std::iota(indices.begin(), indices.end(), 0);
 
         std::cout << "Epoch:" << epoch << std::endl;
-        std::shuffle(std::begin(indices), std::end(indices), rng);
+        std::shuffle(std::begin(indices), std::end(indices), sgd_rng);
 
         for (size_t batch = 0; batch < NBATCHES && !close; ++batch) {
             std::cout << "Batch: " << batch << "/" << NBATCHES << std::endl;
